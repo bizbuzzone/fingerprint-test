@@ -216,7 +216,7 @@ var COMPARE_STATS = { total: 0, match: 0, differ: 0, noref: 0, perCategory: {} }
 // ===== REFERENCE DATA: Real Safari 26.3 on iPhone 14 Pro Max (iOS 18.7) =====
 // Loaded async from reference_data.json, fallback to inline subset
 var REFERENCE = null;
-var REFERENCE_LOADING = fetch('reference_data.json').then(function(r) {
+var REFERENCE_LOADING = fetch('reference_data.json?v=' + Date.now()).then(function(r) {
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
 }).then(function(data) {
