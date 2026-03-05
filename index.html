@@ -1527,8 +1527,8 @@ async function runAllTests() {
     document.getElementById('btnCopy').disabled = false;
     document.getElementById('btnSend').disabled = false;
 
-    // Auto-send
-    sendResults();
+    // Auto-send (only on localhost — GitHub Pages returns 405)
+    if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') sendResults();
 
   } catch(e) {
     console.error('Test runner error:', e);
