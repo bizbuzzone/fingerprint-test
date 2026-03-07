@@ -35,6 +35,8 @@ h3 { margin: 3px 0; font-size: 14px; }
 <h3>3. Export All Results (JSON)</h3>
 <button onclick="exportAll()">Export JSON</button>
 <button onclick="copyJSON()">Copy to Clipboard</button>
+<button onclick="sendToServer()" id="sendBtn">Send to Server</button>
+<span id="sendStatus" style="font-size:11px;color:#666;"></span>
 <pre id="allResult">—</pre>
 </div>
 
@@ -199,6 +201,36 @@ function copyJSON() {
         document.getElementById('allResult').textContent = '(Copied to clipboard)\n\n' + allJSON;
     }).catch(() => {
         document.getElementById('allResult').textContent = allJSON;
+    });
+}
+
+function sendToServer() {
+    allJSON = buildJSON();
+    var status = document.getElementById('sendStatus');
+    var btn = document.getElementById('sendBtn');
+    btn.disabled = true;
+    status.textContent = 'Sending...';
+    status.style.color = '#666';
+
+    var serverUrl = location.origin + '/upload';
+
+    fetch(serverUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: allJSON
+    }).then(function(r) {
+        if (r.ok) {
+            status.textContent = 'Sent!';
+            status.style.color = '#2a2';
+        } else {
+            status.textContent = 'Error: ' + r.status;
+            status.style.color = '#c33';
+        }
+        btn.disabled = false;
+    }).catch(function(e) {
+        status.textContent = 'Failed: ' + e.message;
+        status.style.color = '#c33';
+        btn.disabled = false;
     });
 }
 </script>
