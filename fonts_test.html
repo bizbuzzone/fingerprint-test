@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>CK26 Font Diagnostic v2 — SVGRect vs TextMetrics</title>
+<title>CK26 Font + Emoji Diagnostic v3</title>
 <style>
 body { font-family: -apple-system; font-size: 12px; padding: 8px; }
 pre { font-size: 9px; white-space: pre-wrap; word-break: break-all; max-height: 400px; overflow-y: auto; background: #f5f5f5; padding: 6px; border-radius: 4px; }
@@ -12,24 +12,21 @@ button:disabled { opacity: 0.5; }
 .section { margin: 8px 0; padding: 8px; border: 1px solid #ccc; border-radius: 6px; }
 h3 { margin: 4px 0; font-size: 14px; }
 .status { color: #666; font-size: 11px; }
-.match { color: #2a2; }
-.diff { color: #c33; font-weight: bold; }
 #progress { position: fixed; top: 0; left: 0; right: 0; height: 3px; background: #4cca9f; width: 0%; transition: width 0.3s; z-index: 999; }
 </style>
 </head>
 <body>
 <div id="progress"></div>
-<h2>CK26 Font Diagnostic v2</h2>
-<p class="status">Exact CreepJS fonts.html methodology: 485 fonts x SVGRect + TextMetrics + DOMRect + Pixels + Lengths</p>
+<h2>CK26 Font + Emoji Diagnostic v3</h2>
+<p class="status">Exact CreepJS methodology: fonts.html (485 fonts) + SVG emoji (86 emojis)</p>
 
 <div class="section">
-<h3>Run All Tests</h3>
+<h3>Tests</h3>
 <button onclick="runAll()">Run All Tests</button>
+<button onclick="runEmojiOnly()">Run Emoji SVG Only</button>
 <button onclick="copyJSON()">Copy JSON</button>
-<pre id="output">Press "Run All Tests" to start</pre>
+<pre id="output">Press a button to start</pre>
 </div>
-
-<div id="font-fingerprint"></div>
 
 <script>
 // ===== EXACT CreepJS font lists (fontList + extendedFontList = ~485 fonts) =====
@@ -46,7 +43,27 @@ const families = list.reduce((acc, font) => {
     return acc;
 }, []);
 
-// CreepJS hashMini
+// ===== EXACT CreepJS EMOJIS array (86 emojis) from helpers.ts =====
+const EMOJIS = [
+    [128512],[9786],[129333,8205,9794,65039],[9832],[9784],[9895],[8265],[10024],
+    [128040],[127758],[127891],[128151],[128640],[9996],[128518],[128100],
+    [129525],[129526],[129527],[129528],[129529],[129530],[129531],[129532],
+    [129293],[129295],[129468],[129469],[129462],[9731],[129464],[129465],
+    [129466],[129467],[9723],[129384],[128678],[128054],[128290],[128533],
+    [128104,8205,9794,65039],[9835],[128371],[128293],[128008],[128745],[128298],
+    [129321],[128300],[128105,8205,10084,65039,8205,128139,8205,128104],
+    [10002],[9986],[9935],[9874],[9876],[9881],[9939],[9879],[9904],[9905],
+    [9888],[9762],[9763],[11014],[8599],[10145],[11013],[9883],[10017],[10013],
+    [9766],[9654],[9197],[9199],[9167],[9792],[9794],[10006],[12336],
+    [9877],
+    [9884],[10004],[10035],[10055],[9724],[9642],[10083],[10084],[9996],[9757],
+    [9997],[10052],[9878],[8618],[9775],[9770],[9774],[9745],[10036],[127344],[127359]
+];
+
+// CreepJS CSS_FONT_FAMILY from helpers.ts
+const CSS_FONT_FAMILY = "'Segoe Fluent Icons', 'Segoe UI Emoji', 'Noto Color Emoji', 'Segoe UI Symbol', 'HoloLens MDL2 Assets', 'Segoe MDL2 Assets', 'Segoe Fluent Icons', 'Apple Color Emoji', 'Twemoji Mozilla', sans-serif";
+
+// CreepJS hashMini (FNV-1a variant)
 const hashMini = (x) => {
     if (!x) return x;
     const json = JSON.stringify(x);
@@ -126,60 +143,217 @@ function getLengthDimensions(span) {
     };
 }
 
+// ===== SVG Emoji test (exact CreepJS src/svg/index.ts methodology) =====
+async function runEmojiSVG() {
+    out.textContent += '\n\n===== SVG EMOJI TEST =====\n';
+    out.textContent += 'Replicating CreepJS src/svg/index.ts methodology\n';
+    out.textContent += '86 emojis, font-size: 200px, CSS_FONT_FAMILY, scale(1.000999)\n\n';
+
+    // Create container exactly like CreepJS
+    const div = document.createElement('div');
+    div.setAttribute('id', 'svg-emoji-test');
+    document.body.appendChild(div);
+
+    // Build SVG with all 86 emojis as <text> elements
+    const emojiChars = EMOJIS.map(codes => String.fromCodePoint(...codes));
+
+    // CSS with scale transform (exact CreepJS)
+    const style = document.createElement('style');
+    style.textContent = `
+        .svg-emoji-text {
+            position: absolute !important;
+            left: -9999px !important;
+            font-size: 200px !important;
+            font-family: ${CSS_FONT_FAMILY} !important;
+        }
+        .shift-svg {
+            transform: scale(1.000999) !important;
+        }
+    `;
+    div.appendChild(style);
+
+    // Create one SVG per emoji (CreepJS creates them individually)
+    const svgElems = [];
+    emojiChars.forEach((emoji, i) => {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 200 200');
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', '32');
+        text.setAttribute('y', '32');
+        text.setAttribute('class', 'svg-emoji-text');
+        text.textContent = emoji;
+        svg.appendChild(text);
+        div.appendChild(svg);
+        svgElems.push(text);
+    });
+
+    await new Promise(r => setTimeout(r, 100)); // Let layout settle
+
+    // Measure all emojis — exact CreepJS logic
+    const pattern = new Set();
+    const emojiSet = new Set();
+    const allWidths = [];
+
+    svgElems.forEach((el, i) => {
+        const width = el.getComputedTextLength();
+        const widthStr = '' + width; // CreepJS converts to string
+        allWidths.push({
+            index: i,
+            emoji: emojiChars[i],
+            codes: EMOJIS[i],
+            codePoints: EMOJIS[i].map(c => 'U+' + c.toString(16).toUpperCase()),
+            width: width,
+            widthStr: widthStr,
+            isUnique: !pattern.has(widthStr)
+        });
+        if (!pattern.has(widthStr)) {
+            pattern.add(widthStr);
+            emojiSet.add(EMOJIS[i]);
+        }
+    });
+
+    // Shift detection (CreepJS lied detection)
+    const firstEl = svgElems[0];
+    const initial = firstEl.getComputedTextLength();
+    firstEl.classList.add('shift-svg');
+    const shifted = firstEl.getComputedTextLength();
+    firstEl.classList.remove('shift-svg');
+    const unshifted = firstEl.getComputedTextLength();
+    const lied = (initial - shifted) != (unshifted - shifted);
+
+    // BBox of container SVG
+    const svgBox = div.querySelector('svg');
+    const bBox = svgBox ? svgBox.getBBox() : {};
+    const bBoxSum = (bBox.x || 0) + (bBox.y || 0) + (bBox.width || 0) + (bBox.height || 0);
+
+    // extentOfChar of first emoji
+    let extentSum = 0;
+    try {
+        const ext = svgElems[0].getExtentOfChar(emojiChars[0]);
+        extentSum = ext.x + ext.y + ext.width + ext.height;
+    } catch(e) {}
+
+    // subStringLength and computedTextLength of first emoji
+    let subLen = 0, compLen = 0;
+    try { subLen = svgElems[0].getSubStringLength(0, 10); } catch(e) {}
+    try { compLen = svgElems[0].getComputedTextLength(); } catch(e) {}
+
+    // System sum (CreepJS: 0.00001 * pattern values sum)
+    const systemSum = 0.00001 * [...pattern].map(w => parseFloat(w) || 0).reduce((a, b) => a + b, 0);
+
+    // Output results
+    out.textContent += 'Unique emojis: ' + emojiSet.size + '/86\n';
+    out.textContent += 'Unique widths: ' + pattern.size + '\n';
+    out.textContent += 'Lied: ' + lied + '\n';
+    out.textContent += 'bBoxSum: ' + bBoxSum + '\n';
+    out.textContent += 'extentSum: ' + extentSum + '\n';
+    out.textContent += 'subStringLength: ' + subLen + '\n';
+    out.textContent += 'computedTextLength: ' + compLen + '\n';
+    out.textContent += 'systemSum: ' + systemSum + '\n\n';
+
+    // Show unique emojis
+    const uniqueEmojis = allWidths.filter(e => e.isUnique);
+    out.textContent += 'Unique emoji details:\n';
+    uniqueEmojis.forEach(e => {
+        out.textContent += '  [' + e.index + '] ' + e.emoji + ' ' + e.codePoints.join(',') + ' width=' + e.width + '\n';
+    });
+
+    // Show ALL widths for comparison
+    out.textContent += '\nAll 86 emoji widths:\n';
+    allWidths.forEach(e => {
+        const marker = e.isUnique ? ' *UNIQUE*' : '';
+        out.textContent += '  [' + e.index + '] ' + e.codePoints.join(',') + ' w=' + e.width + marker + '\n';
+    });
+
+    // Target: code point 9877 detail
+    const idx9877 = EMOJIS.findIndex(codes => codes.length === 1 && codes[0] === 9877);
+    if (idx9877 >= 0) {
+        const e = allWidths[idx9877];
+        out.textContent += '\n** Code point 9877 (index ' + idx9877 + '): ' + e.emoji + ' width=' + e.width + ' unique=' + e.isUnique + '\n';
+        // Find which other emoji shares the same width
+        if (!e.isUnique) {
+            const sameWidth = allWidths.filter(o => o.widthStr === e.widthStr && o.index !== idx9877);
+            out.textContent += '   Shares width with: ' + sameWidth.map(o => '[' + o.index + '] ' + o.codePoints.join(',') + ' w=' + o.width).join(', ') + '\n';
+        }
+    }
+
+    // Cleanup
+    div.remove();
+
+    return {
+        uniqueCount: emojiSet.size,
+        uniqueWidthCount: pattern.size,
+        lied: lied,
+        bBoxSum: bBoxSum,
+        extentSum: extentSum,
+        subStringLength: subLen,
+        computedTextLength: compLen,
+        systemSum: systemSum,
+        uniqueEmojis: uniqueEmojis.map(e => ({ index: e.index, codes: e.codes, width: e.width })),
+        allWidths: allWidths.map(e => ({ index: e.index, codes: e.codes, width: e.width, unique: e.isUnique })),
+        emojiSet: [...emojiSet]
+    };
+}
+
 async function runAll() {
     out.textContent = 'Running all tests...\n';
     bar.style.width = '0%';
     const results = {};
 
     // ===== 1. SVGRect =====
+    // FIX: Dynamically create div like CreepJS does
     out.textContent += '\n--- SVGRect ---\n';
     bar.style.width = '10%';
-    const id = 'font-fingerprint';
     const chars = getChars();
-    document.getElementById(id).innerHTML =
-        '<style>#' + id + '-svg-detector { position:absolute!important; left:-9999px!important; font-size:256px!important; font-style:normal!important; font-weight:normal!important; letter-spacing:normal!important; line-break:auto!important; line-height:normal!important; text-transform:none!important; text-align:left!important; text-decoration:none!important; text-shadow:none!important; white-space:normal!important; word-break:normal!important; word-spacing:normal!important; font-family:var(--font); }</style>' +
-        '<svg viewBox="0 0 200 200"><text id="' + id + '-svg-detector">' + chars + '</text></svg>';
 
-    const svgText = document.getElementById(id + '-svg-detector');
+    const svgDiv = document.createElement('div');
+    svgDiv.setAttribute('id', 'font-fp-svg');
+    document.body.appendChild(svgDiv);
+
+    svgDiv.innerHTML =
+        '<style>#font-fp-svg-detector { position:absolute!important; left:-9999px!important; font-size:256px!important; font-style:normal!important; font-weight:normal!important; letter-spacing:normal!important; line-break:auto!important; line-height:normal!important; text-transform:none!important; text-align:left!important; text-decoration:none!important; text-shadow:none!important; white-space:normal!important; word-break:normal!important; word-spacing:normal!important; font-family:var(--font); }</style>' +
+        '<svg viewBox="0 0 200 200"><text id="font-fp-svg-detector">' + chars + '</text></svg>';
+
+    const svgText = document.getElementById('font-fp-svg-detector');
     const svgBase = {};
     baseFonts.forEach(font => {
         svgText.style.setProperty('--font', font);
         svgBase[font] = getSVGDimensions(svgText);
     });
 
-    const svgDetected = {};  // font -> raw dimensions
+    const svgDetected = {};
     const svgCombined = new Set(), svgWidth = new Set(), svgHeight = new Set(), svgY = new Set();
     const svgCharWidth = new Set(), svgCharHeight = new Set(), svgCharY = new Set();
     const svgSubString = new Set(), svgTextLen = new Set();
 
-    for (let i = 0; i < families.length; i++) {
-        const family = families[i];
-        svgText.style.setProperty('font-family', family);
+    // FIX: Use forEach like CreepJS, and != (loose equality)
+    families.forEach((family, i) => {
+        svgText.style.setProperty('--font', family);
         const basefont = family.split(', ')[1];
         const dims = getSVGDimensions(svgText);
-        const font = family.split("'")[1];
+        const font = family.match(/\'(.+)\'/)[1]; // FIX: Use regex like CreepJS
         const b = svgBase[basefont];
 
-        if (dims.width !== b.width || dims.height !== b.height || dims.y !== b.y ||
-            dims.charWidth !== b.charWidth || dims.charHeight !== b.charHeight || dims.charY !== b.charY ||
-            dims.subString !== b.subString || dims.textLen !== b.textLen) {
+        // FIX: Use != (loose equality) like CreepJS
+        if (dims.width != b.width || dims.height != b.height || dims.y != b.y ||
+            dims.charWidth != b.charWidth || dims.charHeight != b.charHeight || dims.charY != b.charY ||
+            dims.subString != b.subString || dims.textLen != b.textLen) {
             svgCombined.add(font);
             svgDetected[font] = dims;
         }
-        if (!isNaN(dims.width) && dims.width !== b.width) svgWidth.add(font);
-        if (!isNaN(dims.height) && dims.height !== b.height) svgHeight.add(font);
-        if (!isNaN(dims.y) && dims.y !== b.y) svgY.add(font);
-        if (!isNaN(dims.charWidth) && dims.charWidth !== b.charWidth) svgCharWidth.add(font);
-        if (!isNaN(dims.charHeight) && dims.charHeight !== b.charHeight) svgCharHeight.add(font);
-        if (!isNaN(dims.charY) && dims.charY !== b.charY) svgCharY.add(font);
-        if (!isNaN(dims.subString) && dims.subString !== b.subString) svgSubString.add(font);
-        if (!isNaN(dims.textLen) && dims.textLen !== b.textLen) svgTextLen.add(font);
+        if (dims.width != b.width) svgWidth.add(font);
+        if (dims.height != b.height) svgHeight.add(font);
+        if (dims.y != b.y) svgY.add(font);
+        if (dims.charWidth != b.charWidth) svgCharWidth.add(font);
+        if (dims.charHeight != b.charHeight) svgCharHeight.add(font);
+        if (dims.charY != b.charY) svgCharY.add(font);
+        if (dims.subString != b.subString) svgSubString.add(font);
+        if (dims.textLen != b.textLen) svgTextLen.add(font);
+    });
 
-        if (i % 100 === 0) {
-            bar.style.width = (10 + (i / families.length) * 20) + '%';
-            await new Promise(r => setTimeout(r, 0));
-        }
-    }
+    // FIX: Use --font CSS var for test fonts too (like CreepJS), not font-family directly
+    // Actually re-reading CreepJS: it sets style.setProperty('--font', family) for ALL fonts
+    // Let me verify by re-running with --font
 
     results.svgRect = {
         combined: { hash: hashMini([...svgCombined]), count: svgCombined.size, fonts: [...svgCombined] },
@@ -201,6 +375,8 @@ async function runAll() {
     out.textContent += 'SVGRect textLen: ' + hashMini([...svgTextLen]) + ' (' + svgTextLen.size + ')\n';
     out.textContent += 'SVGRect fonts: ' + [...svgCombined].join(', ') + '\n';
 
+    svgDiv.remove();
+
     // ===== 2. TextMetrics (Canvas) =====
     bar.style.width = '35%';
     out.textContent += '\n--- TextMetrics ---\n';
@@ -215,32 +391,26 @@ async function runAll() {
     const tmLeft = new Set(), tmRight = new Set(), tmWidth = new Set();
     const tmFontAscent = new Set(), tmFontDescent = new Set();
 
-    for (let i = 0; i < families.length; i++) {
-        const family = families[i];
+    families.forEach((family, i) => {
         const basefont = family.split(', ')[1];
         const dims = getTextMetrics(ctx, family);
-        const font = family.split("'")[1];
+        const font = family.match(/\'(.+)\'/)[1];
         const b = tmBase[basefont];
 
-        if (dims.ascent !== b.ascent || dims.descent !== b.descent || dims.left !== b.left ||
-            dims.right !== b.right || dims.width !== b.width ||
-            dims.fontAscent !== b.fontAscent || dims.fontDescent !== b.fontDescent) {
+        if (dims.ascent != b.ascent || dims.descent != b.descent || dims.left != b.left ||
+            dims.right != b.right || dims.width != b.width ||
+            dims.fontAscent != b.fontAscent || dims.fontDescent != b.fontDescent) {
             tmCombined.add(font);
             tmDetected[font] = dims;
         }
-        if (dims.ascent !== b.ascent) tmAscent.add(font);
-        if (dims.descent !== b.descent) tmDescent.add(font);
-        if (dims.left !== b.left) tmLeft.add(font);
-        if (dims.right !== b.right) tmRight.add(font);
-        if (dims.width !== b.width) tmWidth.add(font);
-        if (dims.fontAscent !== b.fontAscent) tmFontAscent.add(font);
-        if (dims.fontDescent !== b.fontDescent) tmFontDescent.add(font);
-
-        if (i % 100 === 0) {
-            bar.style.width = (35 + (i / families.length) * 20) + '%';
-            await new Promise(r => setTimeout(r, 0));
-        }
-    }
+        if (dims.ascent != b.ascent) tmAscent.add(font);
+        if (dims.descent != b.descent) tmDescent.add(font);
+        if (dims.left != b.left) tmLeft.add(font);
+        if (dims.right != b.right) tmRight.add(font);
+        if (dims.width != b.width) tmWidth.add(font);
+        if (dims.fontAscent != b.fontAscent) tmFontAscent.add(font);
+        if (dims.fontDescent != b.fontDescent) tmFontDescent.add(font);
+    });
 
     results.textMetrics = {
         combined: { hash: hashMini([...tmCombined]), count: tmCombined.size, fonts: [...tmCombined] },
@@ -262,11 +432,15 @@ async function runAll() {
     // ===== 3. DOMRect =====
     bar.style.width = '60%';
     out.textContent += '\n--- DOMRect ---\n';
-    document.getElementById(id).innerHTML =
-        '<style>#' + id + '-detector { --font:""; position:absolute!important; left:-9999px!important; font-size:256px!important; font-style:normal!important; font-weight:normal!important; letter-spacing:normal!important; line-break:auto!important; line-height:normal!important; text-transform:none!important; text-align:left!important; text-decoration:none!important; text-shadow:none!important; white-space:normal!important; word-break:normal!important; word-spacing:normal!important; font-family:var(--font); }</style>' +
-        '<span id="' + id + '-detector">' + chars + '</span>';
+    const drDiv = document.createElement('div');
+    drDiv.setAttribute('id', 'font-fp-dr');
+    document.body.appendChild(drDiv);
 
-    const span = document.getElementById(id + '-detector');
+    drDiv.innerHTML =
+        '<style>#font-fp-dr-detector { --font:""; position:absolute!important; left:-9999px!important; font-size:256px!important; font-style:normal!important; font-weight:normal!important; letter-spacing:normal!important; line-break:auto!important; line-height:normal!important; text-transform:none!important; text-align:left!important; text-decoration:none!important; text-shadow:none!important; white-space:normal!important; word-break:normal!important; word-spacing:normal!important; font-family:var(--font); }</style>' +
+        '<span id="font-fp-dr-detector">' + chars + '</span>';
+
+    const span = document.getElementById('font-fp-dr-detector');
     const range = document.createRange();
 
     const drBase = {};
@@ -277,24 +451,18 @@ async function runAll() {
 
     const drClient = new Set(), drBounding = new Set(), drClientRange = new Set(), drBoundingRange = new Set();
 
-    for (let i = 0; i < families.length; i++) {
-        const family = families[i];
-        span.style.setProperty('font-family', family);
+    families.forEach((family, i) => {
+        span.style.setProperty('--font', family);
         const basefont = family.split(', ')[1];
         const dims = getRectDimensions(span, range);
-        const font = family.split("'")[1];
+        const font = family.match(/\'(.+)\'/)[1];
         const b = drBase[basefont];
 
-        if (dims.client !== b.client) drClient.add(font);
-        if (dims.bounding !== b.bounding) drBounding.add(font);
-        if (dims.clientRange !== b.clientRange) drClientRange.add(font);
-        if (dims.boundingRange !== b.boundingRange) drBoundingRange.add(font);
-
-        if (i % 100 === 0) {
-            bar.style.width = (60 + (i / families.length) * 10) + '%';
-            await new Promise(r => setTimeout(r, 0));
-        }
-    }
+        if (dims.client != b.client) drClient.add(font);
+        if (dims.bounding != b.bounding) drBounding.add(font);
+        if (dims.clientRange != b.clientRange) drClientRange.add(font);
+        if (dims.boundingRange != b.boundingRange) drBoundingRange.add(font);
+    });
 
     results.domRect = {
         client: { hash: hashMini([...drClient]), count: drClient.size, fonts: [...drClient] },
@@ -304,15 +472,20 @@ async function runAll() {
     };
 
     out.textContent += 'DOMRect client: ' + hashMini([...drClient]) + ' (' + drClient.size + '/' + list.length + ')\n';
+    drDiv.remove();
 
     // ===== 4. Pixels =====
     bar.style.width = '75%';
     out.textContent += '\n--- Pixels ---\n';
-    document.getElementById(id).innerHTML =
-        '<style>#' + id + '-detector { --font:""; position:absolute!important; left:-9999px!important; font-size:256px!important; font-style:normal!important; font-weight:normal!important; letter-spacing:normal!important; line-break:auto!important; line-height:normal!important; text-transform:none!important; text-align:left!important; text-decoration:none!important; text-shadow:none!important; white-space:normal!important; word-break:normal!important; word-spacing:normal!important; font-family:var(--font); }</style>' +
-        '<span id="' + id + '-detector">' + chars + '</span>';
+    const pxDiv = document.createElement('div');
+    pxDiv.setAttribute('id', 'font-fp-px');
+    document.body.appendChild(pxDiv);
 
-    const pxSpan = document.getElementById(id + '-detector');
+    pxDiv.innerHTML =
+        '<style>#font-fp-px-detector { --font:""; position:absolute!important; left:-9999px!important; font-size:256px!important; font-style:normal!important; font-weight:normal!important; letter-spacing:normal!important; line-break:auto!important; line-height:normal!important; text-transform:none!important; text-align:left!important; text-decoration:none!important; text-shadow:none!important; white-space:normal!important; word-break:normal!important; word-spacing:normal!important; font-family:var(--font); }</style>' +
+        '<span id="font-fp-px-detector">' + chars + '</span>';
+
+    const pxSpan = document.getElementById('font-fp-px-detector');
     const pxStyle = getComputedStyle(pxSpan);
 
     const pxBase = {};
@@ -322,24 +495,17 @@ async function runAll() {
     });
 
     const pxPixel = new Set(), pxSize = new Set();
-    // Pixels also has perspective and transform sub-tests but they measure same thing with CSS transforms
 
-    for (let i = 0; i < families.length; i++) {
-        const family = families[i];
-        pxSpan.style.setProperty('font-family', family);
+    families.forEach((family, i) => {
+        pxSpan.style.setProperty('--font', family);
         const basefont = family.split(', ')[1];
         const dims = getPixelDimensions(pxStyle);
-        const font = family.split("'")[1];
+        const font = family.match(/\'(.+)\'/)[1];
         const b = pxBase[basefont];
 
-        if (dims.pixel !== b.pixel) pxPixel.add(font);
-        if (dims.size !== b.size) pxSize.add(font);
-
-        if (i % 100 === 0) {
-            bar.style.width = (75 + (i / families.length) * 10) + '%';
-            await new Promise(r => setTimeout(r, 0));
-        }
-    }
+        if (dims.pixel != b.pixel) pxPixel.add(font);
+        if (dims.size != b.size) pxSize.add(font);
+    });
 
     results.pixels = {
         pixel: { hash: hashMini([...pxPixel]), count: pxPixel.size, fonts: [...pxPixel] },
@@ -347,15 +513,20 @@ async function runAll() {
     };
 
     out.textContent += 'Pixels pixel: ' + hashMini([...pxPixel]) + ' (' + pxPixel.size + '/' + list.length + ')\n';
+    pxDiv.remove();
 
     // ===== 5. Lengths =====
     bar.style.width = '88%';
     out.textContent += '\n--- Lengths ---\n';
-    document.getElementById(id).innerHTML =
-        '<style>#' + id + '-detector { --font:""; position:absolute!important; left:-9999px!important; font-size:256px!important; font-style:normal!important; font-weight:normal!important; letter-spacing:normal!important; line-break:auto!important; line-height:normal!important; text-transform:none!important; text-align:left!important; text-decoration:none!important; text-shadow:none!important; white-space:normal!important; word-break:normal!important; word-spacing:normal!important; font-family:var(--font); display:inline-block; }</style>' +
-        '<span id="' + id + '-detector">' + chars + '</span>';
+    const lDiv = document.createElement('div');
+    lDiv.setAttribute('id', 'font-fp-l');
+    document.body.appendChild(lDiv);
 
-    const lSpan = document.getElementById(id + '-detector');
+    lDiv.innerHTML =
+        '<style>#font-fp-l-detector { --font:""; position:absolute!important; left:-9999px!important; font-size:256px!important; font-style:normal!important; font-weight:normal!important; letter-spacing:normal!important; line-break:auto!important; line-height:normal!important; text-transform:none!important; text-align:left!important; text-decoration:none!important; text-shadow:none!important; white-space:normal!important; word-break:normal!important; word-spacing:normal!important; font-family:var(--font); display:inline-block; }</style>' +
+        '<span id="font-fp-l-detector">' + chars + '</span>';
+
+    const lSpan = document.getElementById('font-fp-l-detector');
     const lBase = {};
     baseFonts.forEach(font => {
         lSpan.style.setProperty('--font', font);
@@ -364,23 +535,17 @@ async function runAll() {
 
     const lOffset = new Set(), lClient = new Set(), lScroll = new Set();
 
-    for (let i = 0; i < families.length; i++) {
-        const family = families[i];
-        lSpan.style.setProperty('font-family', family);
+    families.forEach((family, i) => {
+        lSpan.style.setProperty('--font', family);
         const basefont = family.split(', ')[1];
         const dims = getLengthDimensions(lSpan);
-        const font = family.split("'")[1];
+        const font = family.match(/\'(.+)\'/)[1];
         const b = lBase[basefont];
 
-        if (dims.offset !== b.offset) lOffset.add(font);
-        if (dims.client !== b.client) lClient.add(font);
-        if (dims.scroll !== b.scroll) lScroll.add(font);
-
-        if (i % 100 === 0) {
-            bar.style.width = (88 + (i / families.length) * 10) + '%';
-            await new Promise(r => setTimeout(r, 0));
-        }
-    }
+        if (dims.offset != b.offset) lOffset.add(font);
+        if (dims.client != b.client) lClient.add(font);
+        if (dims.scroll != b.scroll) lScroll.add(font);
+    });
 
     results.lengths = {
         offset: { hash: hashMini([...lOffset]), count: lOffset.size, fonts: [...lOffset] },
@@ -389,9 +554,10 @@ async function runAll() {
     };
 
     out.textContent += 'Lengths offset: ' + hashMini([...lOffset]) + ' (' + lOffset.size + '/' + list.length + ')\n';
+    lDiv.remove();
 
-    // ===== 6. Diff Analysis: SVGRect vs TextMetrics =====
-    bar.style.width = '98%';
+    // ===== 6. Diff Analysis =====
+    bar.style.width = '95%';
     out.textContent += '\n\n===== DIFF ANALYSIS =====\n';
 
     const svgOnly = [...svgCombined].filter(f => !tmCombined.has(f));
@@ -403,7 +569,6 @@ async function runAll() {
     out.textContent += 'SVG-only (' + svgOnly.length + '): ' + svgOnly.join(', ') + '\n';
     out.textContent += 'TextMetrics-only (' + tmOnly.length + '): ' + tmOnly.join(', ') + '\n';
 
-    // Show raw dimensions for SVG-only fonts
     if (svgOnly.length > 0) {
         out.textContent += '\n--- SVG-only font dimensions ---\n';
         for (const font of svgOnly) {
@@ -411,6 +576,15 @@ async function runAll() {
             out.textContent += font + ': w=' + d.width + ' h=' + d.height + ' y=' + d.y +
                 ' cw=' + d.charWidth + ' ch=' + d.charHeight + ' cy=' + d.charY +
                 ' ss=' + d.subString + ' tl=' + d.textLen + '\n';
+            // Also show base font dimensions for comparison
+            const baseFont = families.find(f => f.includes("'" + font + "'"));
+            if (baseFont) {
+                const bf = baseFont.split(', ')[1];
+                const b = svgBase[bf];
+                out.textContent += '  base(' + bf + '): w=' + b.width + ' h=' + b.height + ' y=' + b.y +
+                    ' cw=' + b.charWidth + ' ch=' + b.charHeight + ' cy=' + b.charY +
+                    ' ss=' + b.subString + ' tl=' + b.textLen + '\n';
+            }
         }
     }
 
@@ -421,6 +595,10 @@ async function runAll() {
         tmOnlyCount: tmOnly.length,
         bothCount: both.length
     };
+
+    // ===== 7. SVG Emoji Test =====
+    bar.style.width = '97%';
+    results.svgEmoji = await runEmojiSVG();
 
     // ===== Summary =====
     results.meta = {
@@ -433,9 +611,7 @@ async function runAll() {
         totalFamilies: families.length
     };
 
-    // Store for copy
     window._results = results;
-
     bar.style.width = '100%';
 
     out.textContent += '\n\n===== SUMMARY =====\n';
@@ -445,12 +621,26 @@ async function runAll() {
     out.textContent += 'DOMRect client: ' + results.domRect.client.hash + ' (' + results.domRect.client.count + '/' + list.length + ')\n';
     out.textContent += 'Pixels pixel: ' + results.pixels.pixel.hash + ' (' + results.pixels.pixel.count + '/' + list.length + ')\n';
     out.textContent += 'Lengths offset: ' + results.lengths.offset.hash + ' (' + results.lengths.offset.count + '/' + list.length + ')\n';
+    out.textContent += 'SVG Emoji unique: ' + results.svgEmoji.uniqueCount + '/86\n';
     out.textContent += '\nTarget (Real 14PM):\n';
     out.textContent += '  SVGRect combined: eec1b551 (59/' + list.length + ')\n';
     out.textContent += '  TextMetrics combined: 187d5d1d (57/' + list.length + ')\n';
-    out.textContent += '  DOMRect: eec1b551 (59/' + list.length + ')\n';
-    out.textContent += '  Pixels: eec1b551 (59/' + list.length + ')\n';
-    out.textContent += '  Lengths: eec1b551 (59/' + list.length + ')\n';
+    out.textContent += '  SVG Emoji unique: 8/86 (hash: 5208f240)\n';
+    out.textContent += '\nDone! Press "Copy JSON" for full data.\n';
+}
+
+async function runEmojiOnly() {
+    out.textContent = 'Running SVG Emoji test only...\n';
+    bar.style.width = '50%';
+    const results = { svgEmoji: await runEmojiSVG() };
+    results.meta = {
+        userAgent: navigator.userAgent,
+        timestamp: new Date().toISOString(),
+        platform: navigator.platform,
+        devicePixelRatio: window.devicePixelRatio,
+    };
+    window._results = results;
+    bar.style.width = '100%';
     out.textContent += '\nDone! Press "Copy JSON" for full data.\n';
 }
 
