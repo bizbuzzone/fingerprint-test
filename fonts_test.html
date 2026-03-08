@@ -43,15 +43,21 @@ const families = list.reduce((acc, font) => {
     return acc;
 }, []);
 
-// ===== EXACT CreepJS EMOJIS array (86 emojis) from helpers.ts =====
+// ===== EXACT CreepJS EMOJIS array (93 entries) from helpers.ts =====
 const EMOJIS = [
-    [128512],[9786],[129333,8205,9794,65039],[9832],[9784],[9895],[8265],[10024],
-    [128040],[127758],[127891],[128151],[128640],[9996],[128518],[128100],
-    [129525],[129526],[129527],[129528],[129529],[129530],[129531],[129532],
-    [129293],[129295],[129468],[129469],[129462],[9731],[129464],[129465],
-    [129466],[129467],[9723],[129384],[128678],[128054],[128290],[128533],
-    [128104,8205,9794,65039],[9835],[128371],[128293],[128008],[128745],[128298],
-    [129321],[128300],[128105,8205,10084,65039,8205,128139,8205,128104],
+    [128512],[9786],[129333,8205,9794,65039],[9832],[9784],[9895],[8265],[8505],
+    [127987,65039,8205,9895,65039],[129394],[9785],[9760],[129489,8205,129456],
+    [129487,8205,9794,65039],[9975],[129489,8205,129309,8205,129489],[9752],
+    [9968],[9961],[9972],[9992],[9201],[9928],[9730],[9969],[9731],[9732],
+    [9976],[9823],[9937],[9000],[9993],[9999],
+    [128105,8205,10084,65039,8205,128139,8205,128104],
+    [128104,8205,128105,8205,128103,8205,128102],
+    [128104,8205,128105,8205,128102],
+    // android 11
+    [128512],
+    [169],[174],[8482],
+    [128065,65039,8205,128488,65039],
+    // other
     [10002],[9986],[9935],[9874],[9876],[9881],[9939],[9879],[9904],[9905],
     [9888],[9762],[9763],[11014],[8599],[10145],[11013],[9883],[10017],[10013],
     [9766],[9654],[9197],[9199],[9167],[9792],[9794],[10006],[12336],
@@ -60,8 +66,8 @@ const EMOJIS = [
     [9997],[10052],[9878],[8618],[9775],[9770],[9774],[9745],[10036],[127344],[127359]
 ];
 
-// CreepJS CSS_FONT_FAMILY from helpers.ts
-const CSS_FONT_FAMILY = "'Segoe Fluent Icons', 'Segoe UI Emoji', 'Noto Color Emoji', 'Segoe UI Symbol', 'HoloLens MDL2 Assets', 'Segoe MDL2 Assets', 'Segoe Fluent Icons', 'Apple Color Emoji', 'Twemoji Mozilla', sans-serif";
+// EXACT CreepJS CSS_FONT_FAMILY from helpers.ts
+const CSS_FONT_FAMILY = "'Segoe Fluent Icons','Ink Free','Bahnschrift','Segoe MDL2 Assets','HoloLens MDL2 Assets','Leelawadee UI','Javanese Text','Segoe UI Emoji','Aldhabi','Gadugi','Myanmar Text','Nirmala UI','Lucida Console','Cambria Math','Bai Jamjuree','Chakra Petch','Charmonman','Fahkwang','K2D','Kodchasan','KoHo','Sarabun','Srisakdi','Galvji','MuktaMahee Regular','InaiMathi Bold','American Typewriter Semibold','Futura Bold','SignPainter-HouseScript Semibold','PingFang HK Light','Kohinoor Devanagari Medium','Luminari','Geneva','Helvetica Neue','Droid Sans Mono','Dancing Script','Roboto','Ubuntu','Liberation Mono','Source Code Pro','DejaVu Sans','OpenSymbol','Chilanka','Cousine','Arimo','Jomolhari','MONO','Noto Color Emoji',sans-serif";
 
 // CreepJS hashMini (FNV-1a variant)
 const hashMini = (x) => {
@@ -143,51 +149,47 @@ function getLengthDimensions(span) {
     };
 }
 
-// ===== SVG Emoji test (exact CreepJS src/svg/index.ts methodology) =====
+// ===== SVG Emoji test (EXACT CreepJS src/svg/index.ts methodology) =====
 async function runEmojiSVG() {
-    out.textContent += '\n\n===== SVG EMOJI TEST =====\n';
-    out.textContent += 'Replicating CreepJS src/svg/index.ts methodology\n';
-    out.textContent += '86 emojis, font-size: 200px, CSS_FONT_FAMILY, scale(1.000999)\n\n';
+    out.textContent += '\n\n===== SVG EMOJI TEST (exact CreepJS) =====\n';
+    out.textContent += '93 emojis, font-size: 200px, single SVG with <g>, scale(1.000999)\n\n';
 
-    // Create container exactly like CreepJS
-    const div = document.createElement('div');
-    div.setAttribute('id', 'svg-emoji-test');
-    document.body.appendChild(div);
-
-    // Build SVG with all 86 emojis as <text> elements
     const emojiChars = EMOJIS.map(codes => String.fromCodePoint(...codes));
 
-    // CSS with scale transform (exact CreepJS)
-    const style = document.createElement('style');
-    style.textContent = `
-        .svg-emoji-text {
-            position: absolute !important;
-            left: -9999px !important;
-            font-size: 200px !important;
-            font-family: ${CSS_FONT_FAMILY} !important;
+    // EXACT CreepJS structure: div > style + svg > g#svgBox > text*93
+    const div = document.createElement('div');
+    div.setAttribute('id', 'svg-container');
+    div.innerHTML = `
+        <style>
+        #svg-container {
+            position: absolute;
+            left: -9999px;
+            height: auto;
         }
-        .shift-svg {
+        #svg-container .shift-svg {
             transform: scale(1.000999) !important;
         }
+        .svgrect-emoji {
+            font-family: ${CSS_FONT_FAMILY};
+            font-size: 200px !important;
+            height: auto;
+            position: absolute !important;
+            transform: scale(1.000999);
+        }
+        </style>
+        <svg>
+            <g id="svgBox">
+                ${emojiChars.map(emoji => `<text x="32" y="32" class="svgrect-emoji">${emoji}</text>`).join('')}
+            </g>
+        </svg>
     `;
-    div.appendChild(style);
+    document.body.appendChild(div);
 
-    // Create one SVG per emoji (CreepJS creates them individually)
-    const svgElems = [];
-    emojiChars.forEach((emoji, i) => {
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        svg.setAttribute('viewBox', '0 0 200 200');
-        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', '32');
-        text.setAttribute('y', '32');
-        text.setAttribute('class', 'svg-emoji-text');
-        text.textContent = emoji;
-        svg.appendChild(text);
-        div.appendChild(svg);
-        svgElems.push(text);
-    });
+    await new Promise(r => setTimeout(r, 100));
 
-    await new Promise(r => setTimeout(r, 100)); // Let layout settle
+    // Get elements exactly like CreepJS
+    const svgBox = document.getElementById('svgBox');
+    const svgElems = [...svgBox.getElementsByClassName('svgrect-emoji')];
 
     // Measure all emojis — exact CreepJS logic
     const pattern = new Set();
@@ -195,38 +197,36 @@ async function runEmojiSVG() {
     const allWidths = [];
 
     svgElems.forEach((el, i) => {
-        const width = el.getComputedTextLength();
-        const widthStr = '' + width; // CreepJS converts to string
+        const emoji = emojiChars[i];
+        const dimensions = '' + el.getComputedTextLength(); // CreepJS: string conversion
         allWidths.push({
             index: i,
-            emoji: emojiChars[i],
             codes: EMOJIS[i],
             codePoints: EMOJIS[i].map(c => 'U+' + c.toString(16).toUpperCase()),
-            width: width,
-            widthStr: widthStr,
-            isUnique: !pattern.has(widthStr)
+            width: el.getComputedTextLength(),
+            widthStr: dimensions,
+            isUnique: !pattern.has(dimensions)
         });
-        if (!pattern.has(widthStr)) {
-            pattern.add(widthStr);
-            emojiSet.add(EMOJIS[i]);
+        if (!pattern.has(dimensions)) {
+            pattern.add(dimensions);
+            emojiSet.add(emoji);
         }
     });
 
-    // Shift detection (CreepJS lied detection)
-    const firstEl = svgElems[0];
-    const initial = firstEl.getComputedTextLength();
-    firstEl.classList.add('shift-svg');
-    const shifted = firstEl.getComputedTextLength();
-    firstEl.classList.remove('shift-svg');
-    const unshifted = firstEl.getComputedTextLength();
+    // Shift detection (exact CreepJS lied detection)
+    const svgEmojiEl = svgElems[0];
+    const initial = svgEmojiEl.getComputedTextLength();
+    svgEmojiEl.classList.add('shift-svg');
+    const shifted = svgEmojiEl.getComputedTextLength();
+    svgEmojiEl.classList.remove('shift-svg');
+    const unshifted = svgEmojiEl.getComputedTextLength();
     const lied = (initial - shifted) != (unshifted - shifted);
 
-    // BBox of container SVG
-    const svgBox = div.querySelector('svg');
-    const bBox = svgBox ? svgBox.getBBox() : {};
-    const bBoxSum = (bBox.x || 0) + (bBox.y || 0) + (bBox.width || 0) + (bBox.height || 0);
+    // BBox of svgBox group (exact CreepJS: svgBox.getBBox())
+    const bBox = svgBox.getBBox();
+    const bBoxSum = bBox.x + bBox.y + bBox.width + bBox.height;
 
-    // extentOfChar of first emoji
+    // extentOfChar of first emoji (exact CreepJS: getExtentOfChar(EMOJIS[0]))
     let extentSum = 0;
     try {
         const ext = svgElems[0].getExtentOfChar(emojiChars[0]);
@@ -238,49 +238,54 @@ async function runEmojiSVG() {
     try { subLen = svgElems[0].getSubStringLength(0, 10); } catch(e) {}
     try { compLen = svgElems[0].getComputedTextLength(); } catch(e) {}
 
-    // System sum (CreepJS: 0.00001 * pattern values sum)
-    const systemSum = 0.00001 * [...pattern].map(w => parseFloat(w) || 0).reduce((a, b) => a + b, 0);
+    // System sum (exact CreepJS: 0.00001 * sum of unique pattern float values)
+    const svgrectSystemSum = 0.00001 * [...pattern].map(w => parseFloat(w) || 0).reduce((a, b) => a + b, 0);
 
     // Output results
-    out.textContent += 'Unique emojis: ' + emojiSet.size + '/86\n';
+    out.textContent += 'Total emojis: ' + EMOJIS.length + '\n';
+    out.textContent += 'Unique emojis: ' + emojiSet.size + '/' + EMOJIS.length + '\n';
     out.textContent += 'Unique widths: ' + pattern.size + '\n';
     out.textContent += 'Lied: ' + lied + '\n';
     out.textContent += 'bBoxSum: ' + bBoxSum + '\n';
     out.textContent += 'extentSum: ' + extentSum + '\n';
     out.textContent += 'subStringLength: ' + subLen + '\n';
     out.textContent += 'computedTextLength: ' + compLen + '\n';
-    out.textContent += 'systemSum: ' + systemSum + '\n\n';
+    out.textContent += 'svgrectSystemSum: ' + svgrectSystemSum + '\n\n';
 
     // Show unique emojis
     const uniqueEmojis = allWidths.filter(e => e.isUnique);
     out.textContent += 'Unique emoji details:\n';
     uniqueEmojis.forEach(e => {
-        out.textContent += '  [' + e.index + '] ' + e.emoji + ' ' + e.codePoints.join(',') + ' width=' + e.width + '\n';
+        out.textContent += '  [' + e.index + '] ' + e.codePoints.join(',') + ' w=' + e.width + '\n';
     });
 
-    // Show ALL widths for comparison
-    out.textContent += '\nAll 86 emoji widths:\n';
+    // Show ALL widths
+    out.textContent += '\nAll ' + EMOJIS.length + ' emoji widths:\n';
     allWidths.forEach(e => {
         const marker = e.isUnique ? ' *UNIQUE*' : '';
         out.textContent += '  [' + e.index + '] ' + e.codePoints.join(',') + ' w=' + e.width + marker + '\n';
     });
 
-    // Target: code point 9877 detail
-    const idx9877 = EMOJIS.findIndex(codes => codes.length === 1 && codes[0] === 9877);
-    if (idx9877 >= 0) {
-        const e = allWidths[idx9877];
-        out.textContent += '\n** Code point 9877 (index ' + idx9877 + '): ' + e.emoji + ' width=' + e.width + ' unique=' + e.isUnique + '\n';
-        // Find which other emoji shares the same width
-        if (!e.isUnique) {
-            const sameWidth = allWidths.filter(o => o.widthStr === e.widthStr && o.index !== idx9877);
-            out.textContent += '   Shares width with: ' + sameWidth.map(o => '[' + o.index + '] ' + o.codePoints.join(',') + ' w=' + o.width).join(', ') + '\n';
+    // Highlight key characters
+    const keyChars = [9835, 9877, 169, 174, 8482];
+    keyChars.forEach(cp => {
+        const idx = EMOJIS.findIndex(codes => codes.length === 1 && codes[0] === cp);
+        if (idx >= 0) {
+            const e = allWidths[idx];
+            out.textContent += '\n** U+' + cp.toString(16).toUpperCase() + ' (index ' + idx + '): w=' + e.width + ' unique=' + e.isUnique;
+            if (!e.isUnique) {
+                const sameWidth = allWidths.filter(o => o.widthStr === e.widthStr && o.index !== idx);
+                out.textContent += ' shares_with=' + sameWidth.length + '_others';
+            }
+            out.textContent += '\n';
         }
-    }
+    });
 
     // Cleanup
     div.remove();
 
     return {
+        totalEmojis: EMOJIS.length,
         uniqueCount: emojiSet.size,
         uniqueWidthCount: pattern.size,
         lied: lied,
@@ -288,10 +293,10 @@ async function runEmojiSVG() {
         extentSum: extentSum,
         subStringLength: subLen,
         computedTextLength: compLen,
-        systemSum: systemSum,
+        svgrectSystemSum: svgrectSystemSum,
         uniqueEmojis: uniqueEmojis.map(e => ({ index: e.index, codes: e.codes, width: e.width })),
         allWidths: allWidths.map(e => ({ index: e.index, codes: e.codes, width: e.width, unique: e.isUnique })),
-        emojiSet: [...emojiSet]
+        emojiSet: [...emojiSet].map(e => [...e].map(c => c.codePointAt(0)))
     };
 }
 
@@ -597,8 +602,73 @@ async function runAll() {
     };
 
     // ===== 7. SVG Emoji Test =====
-    bar.style.width = '97%';
+    bar.style.width = '95%';
     results.svgEmoji = await runEmojiSVG();
+
+    // ===== 8. FontFace.load() — CreepJS main fonts module =====
+    bar.style.width = '97%';
+    out.textContent += '\n\n===== FONTFACE.LOAD() TEST =====\n';
+    out.textContent += 'CreepJS main module: ~60 curated fonts via FontFace.load()\n\n';
+
+    // Exact CreepJS font list (Apple + Linux + Android + Desktop apps)
+    const creepjsFontList = [
+        // Apple fonts (macOS 10.9 - Ventura 13)
+        'American Typewriter Semibold','Futura Bold','Geneva','Helvetica Neue',
+        'SignPainter-HouseScript Semibold','PingFang HK Light',
+        'Kohinoor Devanagari Medium','Luminari','Galvji','MuktaMahee Regular',
+        'InaiMathi Bold',
+        // Linux
+        'Arimo','Chilanka','Cousine','Jomolhari','MONO','Noto Color Emoji','Ubuntu',
+        // Android
+        'Dancing Script','Droid Sans Mono','Roboto',
+        // Windows (won't exist on iOS but test anyway)
+        'Segoe Fluent Icons','Ink Free','Bahnschrift','Segoe MDL2 Assets',
+        'HoloLens MDL2 Assets','Leelawadee UI','Javanese Text','Segoe UI Emoji',
+        'Aldhabi','Gadugi','Myanmar Text','Nirmala UI','Lucida Console','Cambria Math',
+        // Desktop apps
+        'MS Outlook','ZWAdobeF','Amiri','KACSTOffice','Liberation Mono','Source Code Pro',
+        'DejaVu Sans','Gentium Book Basic','OpenSymbol',
+        // Thai
+        'Bai Jamjuree','Chakra Petch','Charmonman','Fahkwang','K2D','Kodchasan','KoHo','Sarabun','Srisakdi'
+    ].sort();
+
+    try {
+        const fontFaceList = creepjsFontList.map(font => new FontFace(font, 'local("' + font + '")'));
+        const responses = await Promise.allSettled(fontFaceList.map(font => font.load()));
+        const fontsLoaded = responses.reduce((acc, font) => {
+            if (font.status == 'fulfilled') acc.push(font.value.family);
+            return acc;
+        }, []);
+
+        // Also try document.fonts.check()
+        const fontsChecked = creepjsFontList.reduce((acc, font) => {
+            try {
+                if (document.fonts.check('0px "' + font + '"')) acc.push(font);
+            } catch(e) {}
+            return acc;
+        }, []);
+
+        const allDetected = [...new Set([...fontsChecked, ...fontsLoaded])].sort();
+
+        results.fontFaceLoad = {
+            tested: creepjsFontList.length,
+            loadedCount: fontsLoaded.length,
+            loaded: fontsLoaded.sort(),
+            checkedCount: fontsChecked.length,
+            checked: fontsChecked.sort(),
+            combinedCount: allDetected.length,
+            combined: allDetected
+        };
+
+        out.textContent += 'FontFace.load(): ' + fontsLoaded.length + '/' + creepjsFontList.length + ' loaded\n';
+        out.textContent += 'document.fonts.check(): ' + fontsChecked.length + '/' + creepjsFontList.length + ' found\n';
+        out.textContent += 'Combined: ' + allDetected.length + ' fonts\n';
+        out.textContent += 'Loaded: ' + fontsLoaded.sort().join(', ') + '\n';
+        out.textContent += 'Checked: ' + fontsChecked.sort().join(', ') + '\n';
+    } catch(e) {
+        out.textContent += 'FontFace.load() error: ' + e.message + '\n';
+        results.fontFaceLoad = { error: e.message };
+    }
 
     // ===== Summary =====
     results.meta = {
@@ -621,11 +691,11 @@ async function runAll() {
     out.textContent += 'DOMRect client: ' + results.domRect.client.hash + ' (' + results.domRect.client.count + '/' + list.length + ')\n';
     out.textContent += 'Pixels pixel: ' + results.pixels.pixel.hash + ' (' + results.pixels.pixel.count + '/' + list.length + ')\n';
     out.textContent += 'Lengths offset: ' + results.lengths.offset.hash + ' (' + results.lengths.offset.count + '/' + list.length + ')\n';
-    out.textContent += 'SVG Emoji unique: ' + results.svgEmoji.uniqueCount + '/86\n';
+    out.textContent += 'SVG Emoji unique: ' + results.svgEmoji.uniqueCount + '/' + results.svgEmoji.totalEmojis + '\n';
     out.textContent += '\nTarget (Real 14PM):\n';
-    out.textContent += '  SVGRect combined: eec1b551 (59/' + list.length + ')\n';
+    out.textContent += '  SVGRect combined: 187d5d1d (57/' + list.length + ')\n';
     out.textContent += '  TextMetrics combined: 187d5d1d (57/' + list.length + ')\n';
-    out.textContent += '  SVG Emoji unique: 8/86 (hash: 5208f240)\n';
+    out.textContent += '  SVG Emoji: CK26 must match Real (same unique count + widths)\n';
     out.textContent += '\nDone! Press "Copy JSON" for full data.\n';
 }
 
